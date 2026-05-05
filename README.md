@@ -2,9 +2,9 @@
 
 <div align="center">
 
-# SRT Player
-
 ![SRT Player](https://raw.githubusercontent.com/arthiccc/srtplayer/main/logo.svg)
+
+# SRT Player
 
 **Local audio player with waveform visualization and SRT subtitle synchronization**
 
