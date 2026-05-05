@@ -4,7 +4,7 @@
 
 # SRT Player
 
-<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIyIiB5PSI4IiB3aWR0aD0iMjgiIGhlaWdodD0iMTYiIHJ4PSIyIiBzdHJva2U9IiMwMDQ0ZmYiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik04IDE2TDEyIDEyTDE2IDE2TDIwIDEyTDI0IDE2IiBzdHJva2U9IiMwMDQ0ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZXpPY2ludGFhbD0icm91bmQiLz48Y2lyY2xlIGN4PSIyNiIgY3k9IjI0IiByPSI0IiBmaWxsPSIjMDA0NGZmIi8+PC9zdmc+" alt="SRT Player Logo" width="64">
+![SRT Player](https://raw.githubusercontent.com/arthiccc/srtplayer/main/logo.svg)
 
 **Local audio player with waveform visualization and SRT subtitle synchronization**
 
