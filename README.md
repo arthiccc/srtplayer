@@ -166,6 +166,7 @@ This project is licensed under the **MIT License**—see [LICENSE](LICENSE) for 
 ## Acknowledgments
 
 - [wavesurfer.js](https://wavesurfer-js.org/) — Audio visualization powerhouse
+- [JFK/voicesrt](https://github.com/JFK/voicesrt) — The GOAT. Full-featured SRT editor with transcription, waveform, speaker management, YouTube tools, and AI suggestions. This project was inspired by their amazing work.
 - Built for subtitle editors who need precision timing tools
 
 ---
