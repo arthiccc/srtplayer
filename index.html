@@ -254,8 +254,6 @@
         }
         
         function initWaveform() {
-            initEQ(); // Initialize EQ context
-            
             wavesurfer = WaveSurfer.create({
                 container: '#waveform',
                 waveColor: '#00d4ff',
@@ -266,7 +264,6 @@
                 barRadius: 3,
                 height: 80,
                 normalize: true,
-                backend: 'WebAudio', // Use WebAudio backend for EQ
             });
 
             wavesurfer.on('play', () => {
@@ -388,29 +385,55 @@
             localStorage.removeItem('lastSRTName');
         }
 
+        let customAudio;
+        
+        let customAudio, customSource;
+        
         audioInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
-            if (!wavesurfer) initWaveform();
-            
             const url = URL.createObjectURL(file);
+            
+            // Initialize EQ context
+            initEQ();
+            
+            // Create our custom audio element
+            customAudio = new Audio(url);
+            customAudio.crossOrigin = 'anonymous';
+            
+            // Connect EQ chain when audio plays
+            const setupEQ = () => {
+                if (!customSource) {
+                    try {
+                        customSource = eqContext.createMediaElementSource(customAudio);
+                        customSource.connect(eqFilters[0]);
+                        eqFilters[eqFilters.length-1].connect(eqContext.destination);
+                        updateEQValues();
+                        console.log('✓ EQ Active');
+                    } catch(err) {
+                        console.log('EQ:', err.message);
+                    }
+                }
+            };
+            
+            customAudio.addEventListener('play', setupEQ, { once: true });
+            
+            // Load for waveform visualization
+            if (!wavesurfer) initWaveform();
             wavesurfer.load(url);
             
             wavesurfer.on('ready', () => {
-                // Connect wavesurfer's WebAudio output to our EQ filters
-                if (wavesurfer.backend && wavesurfer.backend.ac) {
-                    const ac = wavesurfer.backend.ac;
-                    // Disconnect default destination
-                    wavesurfer.backend.disconnect();
-                    // Connect through EQ filters
-                    wavesurfer.backend.connect(eqFilters[0]);
+                // Replace with our audio element
+                try {
+                    wavesurfer.setMediaElement(customAudio);
+                } catch(e) {
+                    // Not supported, use default
                 }
             });
             
             audioInfo.textContent = file.name;
             localStorage.setItem('lastAudioName', file.name);
-            
             statusEl.textContent = 'Audio loaded';
             statusEl.className = 'status ready';
         });
