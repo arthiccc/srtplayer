@@ -195,7 +195,67 @@
         if (lastAudioName) audioInfo.textContent = `Last: ${lastAudioName}`;
         if (lastSRTName) srtInfo.textContent = `Last: ${lastSRTName}`;
 
+        // Global EQ state
+        let eqEnabled = false;
+        let eqContext, eqFilters = [], audioSource;
+        
+        function initEQ() {
+            if (eqContext) return;
+            eqContext = new (window.AudioContext || window.webkitAudioContext)();
+            const frequencies = [60, 230, 910, 3600, 14000];
+            
+            for (let i = 0; i < frequencies.length; i++) {
+                const filter = eqContext.createBiquadFilter();
+                if (i === 0) {
+                    filter.type = 'lowshelf';
+                    filter.frequency.value = frequencies[i];
+                } else if (i === frequencies.length - 1) {
+                    filter.type = 'highshelf';
+                    filter.frequency.value = frequencies[i];
+                } else {
+                    filter.type = 'peaking';
+                    filter.frequency.value = frequencies[i];
+                    filter.Q.value = 1;
+                }
+                filter.gain.value = 0;
+                eqFilters.push(filter);
+            }
+            // Chain filters
+            for (let i = 0; i < eqFilters.length - 1; i++) {
+                eqFilters[i].connect(eqFilters[i + 1]);
+            }
+            eqFilters[eqFilters.length - 1].connect(eqContext.destination);
+        }
+        
+        function updateEQValues() {
+            if (!eqFilters.length) return;
+            const bands = ['60', '230', '910', '3600', '14000'];
+            bands.forEach((band, i) => {
+                const val = parseFloat(document.getElementById(`eq-${band}`).value);
+                document.getElementById(`val-${band}`).textContent = (val > 0 ? '+' : '') + val + ' dB';
+                eqFilters[i].gain.value = document.getElementById('eq-enabled').checked ? val : 0;
+            });
+        }
+        
+        // Presets
+        function setEQPreset(preset) {
+            const presets = {
+                flat: [0, 0, 0, 0, 0],
+                bass: [8, 4, 0, 0, 0],
+                treble: [0, 0, 0, 4, 8],
+                vocal: [-2, 2, 6, 2, -2],
+                radio: [-2, 0, 6, 4, 0]
+            };
+            const vals = presets[preset] || presets.flat;
+            ['eq-60', 'eq-230', 'eq-910', 'eq-3600', 'eq-14000'].forEach((id, i) => {
+                document.getElementById(id).value = vals[i];
+            });
+            updateEQValues();
+        }
+        
         function initWaveform() {
+            initEQ(); // Initialize EQ context
+            
             wavesurfer = WaveSurfer.create({
                 container: '#waveform',
                 waveColor: '#00d4ff',
@@ -206,6 +266,7 @@
                 barRadius: 3,
                 height: 80,
                 normalize: true,
+                backend: 'WebAudio', // Use WebAudio backend for EQ
             });
 
             wavesurfer.on('play', () => {
@@ -336,12 +397,14 @@
             const url = URL.createObjectURL(file);
             wavesurfer.load(url);
             
-            // Apply equalizer to audio element
             wavesurfer.on('ready', () => {
-                const mediaEl = wavesurfer.getMediaElement();
-                if (mediaEl && !mediaEl.eqApplied) {
-                    applyEqualizer(mediaEl);
-                    mediaEl.eqApplied = true;
+                // Connect wavesurfer's WebAudio output to our EQ filters
+                if (wavesurfer.backend && wavesurfer.backend.ac) {
+                    const ac = wavesurfer.backend.ac;
+                    // Disconnect default destination
+                    wavesurfer.backend.disconnect();
+                    // Connect through EQ filters
+                    wavesurfer.backend.connect(eqFilters[0]);
                 }
             });
             
@@ -389,83 +452,12 @@
             wavesurfer.setPlaybackRate(parseFloat(e.target.value));
         });
 
-        // Equalizer using Web Audio API
-        let audioContext, eqFilters = [];
-        
-        function initAudioContext() {
-            if (audioContext) return audioContext;
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            return audioContext;
-        }
-        
-        function createEQFilters(ctx) {
-            const frequencies = [60, 230, 910, 3600, 14000];
-            const bands = ['60', '230', '910', '3600', '14000'];
-            
-            for (let i = 0; i < frequencies.length; i++) {
-                const filter = ctx.createBiquadFilter();
-                if (i === 0) {
-                    filter.type = 'lowshelf';
-                    filter.frequency.value = frequencies[i];
-                } else if (i === frequencies.length - 1) {
-                    filter.type = 'highshelf';
-                    filter.frequency.value = frequencies[i];
-                } else {
-                    filter.type = 'peaking';
-                    filter.frequency.value = frequencies[i];
-                    filter.Q.value = 1;
-                }
-                filter.gain.value = 0;
-                eqFilters.push(filter);
-            }
-            
-            // Chain filters
-            for (let i = 0; i < eqFilters.length - 1; i++) {
-                eqFilters[i].connect(eqFilters[i + 1]);
-            }
-            return eqFilters[0];
-        }
-        
-        function applyEqualizer(mediaElement) {
-            const ctx = initAudioContext();
-            const src = ctx.createMediaElementSource(mediaElement);
-            const filters = createEQFilters(ctx);
-            src.connect(filters);
-            filters.connect(ctx.destination);
-        }
-        
-        function updateEQ() {
-            const enabled = document.getElementById('eq-enabled').checked;
-            const bands = ['60', '230', '910', '3600', '14000'];
-            
-            bands.forEach((band, i) => {
-                const val = parseFloat(document.getElementById(`eq-${band}`).value);
-                document.getElementById(`val-${band}`).textContent = (val > 0 ? '+' : '') + val + ' dB';
-                if (eqFilters[i]) eqFilters[i].gain.value = enabled ? val : 0;
-            });
-        }
-        
-        // Bind slider events
+        // Bind EQ slider events
         ['eq-60', 'eq-230', 'eq-910', 'eq-3600', 'eq-14000'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updateEQ);
+            document.getElementById(id).addEventListener('input', updateEQValues);
         });
         
-        document.getElementById('eq-enabled').addEventListener('change', updateEQ);
-        
-        function setEQPreset(preset) {
-            const presets = {
-                flat: [0, 0, 0, 0, 0],
-                bass: [8, 4, 0, 0, 0],
-                treble: [0, 0, 0, 4, 8],
-                vocal: [-2, 2, 6, 2, -2],
-                radio: [-2, 0, 6, 4, 0]
-            };
-            const vals = presets[preset] || presets.flat;
-            ['eq-60', 'eq-230', 'eq-910', 'eq-3600', 'eq-14000'].forEach((id, i) => {
-                document.getElementById(id).value = vals[i];
-            });
-            updateEQ();
-        }
+        document.getElementById('eq-enabled').addEventListener('change', updateEQValues);
     </script>
 </body>
 </html>
