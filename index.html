@@ -50,6 +50,19 @@
         .repo-link a { color: #666; text-decoration: none; }
         .repo-link a:hover { color: #00d4ff; }
         
+        .equalizer-section { background: #16213e; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; }
+        .equalizer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .equalizer-header h3 { color: #00d4ff; font-size: 14px; }
+        .eq-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; }
+        .eq-toggle input { width: auto; }
+        .eq-bands { display: flex; justify-content: space-between; gap: 10px; }
+        .eq-band { flex: 1; text-align: center; }
+        .eq-band label { display: block; font-size: 10px; color: #888; margin-bottom: 5px; }
+        .eq-band input[type="range"] { width: 100%; height: 80px; writing-mode: vertical-lr; direction: rtl; -webkit-appearance: none; background: transparent; cursor: pointer; }
+        .eq-band input[type="range"]::-webkit-slider-track { width: 6px; background: #333; border-radius: 3px; }
+        .eq-band input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #00d4ff; border-radius: 50%; margin-left: -5px; }
+        .eq-band .db-value { font-size: 11px; color: #00d4ff; font-weight: 600; margin-top: 5px; }
+        
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
@@ -98,6 +111,49 @@
                 <span class="time-display" id="time-display">00:00 / 00:00</span>
             </div>
             <div class="status" id="status">Select audio and SRT files</div>
+        </div>
+        
+        <div class="equalizer-section">
+            <div class="equalizer-header">
+                <h3>🎛️ Equalizer</h3>
+                <label class="eq-toggle">
+                    <input type="checkbox" id="eq-enabled"> Enable EQ
+                </label>
+            </div>
+            <div class="eq-presets" style="margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;" onclick="setEQPreset('flat')">Flat</button>
+                <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;" onclick="setEQPreset('bass')">Bass Boost</button>
+                <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;" onclick="setEQPreset('treble')">Treble Boost</button>
+                <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;" onclick="setEQPreset('vocal')">Vocal</button>
+                <button class="btn-secondary" style="padding: 8px 16px; font-size: 12px;" onclick="setEQPreset('radio')">Radio</button>
+            </div>
+            <div class="eq-bands">
+                <div class="eq-band">
+                    <label>60Hz<br><small>Bass</small></label>
+                    <input type="range" id="eq-60" min="-12" max="12" value="0" step="1">
+                    <div class="db-value" id="val-60">0 dB</div>
+                </div>
+                <div class="eq-band">
+                    <label>230Hz<br><small>Low Mid</small></label>
+                    <input type="range" id="eq-230" min="-12" max="12" value="0" step="1">
+                    <div class="db-value" id="val-230">0 dB</div>
+                </div>
+                <div class="eq-band">
+                    <label>910Hz<br><small>Mid</small></label>
+                    <input type="range" id="eq-910" min="-12" max="12" value="0" step="1">
+                    <div class="db-value" id="val-910">0 dB</div>
+                </div>
+                <div class="eq-band">
+                    <label>3.6kHz<br><small>High Mid</small></label>
+                    <input type="range" id="eq-3600" min="-12" max="12" value="0" step="1">
+                    <div class="db-value" id="val-3600">0 dB</div>
+                </div>
+                <div class="eq-band">
+                    <label>14kHz<br><small>Treble</small></label>
+                    <input type="range" id="eq-14000" min="-12" max="12" value="0" step="1">
+                    <div class="db-value" id="val-14000">0 dB</div>
+                </div>
+            </div>
         </div>
         
         <div class="subtitle-display">
@@ -280,6 +336,15 @@
             const url = URL.createObjectURL(file);
             wavesurfer.load(url);
             
+            // Apply equalizer to audio element
+            wavesurfer.on('ready', () => {
+                const mediaEl = wavesurfer.getMediaElement();
+                if (mediaEl && !mediaEl.eqApplied) {
+                    applyEqualizer(mediaEl);
+                    mediaEl.eqApplied = true;
+                }
+            });
+            
             audioInfo.textContent = file.name;
             localStorage.setItem('lastAudioName', file.name);
             
@@ -323,6 +388,84 @@
             if (!wavesurfer) return;
             wavesurfer.setPlaybackRate(parseFloat(e.target.value));
         });
+
+        // Equalizer using Web Audio API
+        let audioContext, eqFilters = [];
+        
+        function initAudioContext() {
+            if (audioContext) return audioContext;
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            return audioContext;
+        }
+        
+        function createEQFilters(ctx) {
+            const frequencies = [60, 230, 910, 3600, 14000];
+            const bands = ['60', '230', '910', '3600', '14000'];
+            
+            for (let i = 0; i < frequencies.length; i++) {
+                const filter = ctx.createBiquadFilter();
+                if (i === 0) {
+                    filter.type = 'lowshelf';
+                    filter.frequency.value = frequencies[i];
+                } else if (i === frequencies.length - 1) {
+                    filter.type = 'highshelf';
+                    filter.frequency.value = frequencies[i];
+                } else {
+                    filter.type = 'peaking';
+                    filter.frequency.value = frequencies[i];
+                    filter.Q.value = 1;
+                }
+                filter.gain.value = 0;
+                eqFilters.push(filter);
+            }
+            
+            // Chain filters
+            for (let i = 0; i < eqFilters.length - 1; i++) {
+                eqFilters[i].connect(eqFilters[i + 1]);
+            }
+            return eqFilters[0];
+        }
+        
+        function applyEqualizer(mediaElement) {
+            const ctx = initAudioContext();
+            const src = ctx.createMediaElementSource(mediaElement);
+            const filters = createEQFilters(ctx);
+            src.connect(filters);
+            filters.connect(ctx.destination);
+        }
+        
+        function updateEQ() {
+            const enabled = document.getElementById('eq-enabled').checked;
+            const bands = ['60', '230', '910', '3600', '14000'];
+            
+            bands.forEach((band, i) => {
+                const val = parseFloat(document.getElementById(`eq-${band}`).value);
+                document.getElementById(`val-${band}`).textContent = (val > 0 ? '+' : '') + val + ' dB';
+                if (eqFilters[i]) eqFilters[i].gain.value = enabled ? val : 0;
+            });
+        }
+        
+        // Bind slider events
+        ['eq-60', 'eq-230', 'eq-910', 'eq-3600', 'eq-14000'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateEQ);
+        });
+        
+        document.getElementById('eq-enabled').addEventListener('change', updateEQ);
+        
+        function setEQPreset(preset) {
+            const presets = {
+                flat: [0, 0, 0, 0, 0],
+                bass: [8, 4, 0, 0, 0],
+                treble: [0, 0, 0, 4, 8],
+                vocal: [-2, 2, 6, 2, -2],
+                radio: [-2, 0, 6, 4, 0]
+            };
+            const vals = presets[preset] || presets.flat;
+            ['eq-60', 'eq-230', 'eq-910', 'eq-3600', 'eq-14000'].forEach((id, i) => {
+                document.getElementById(id).value = vals[i];
+            });
+            updateEQ();
+        }
     </script>
 </body>
 </html>
