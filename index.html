@@ -116,28 +116,117 @@
     </div>
 
     <script>
+        'use strict';
+
+        const MAX_SRT_BLOCKS = 10000;
+        const MAX_SUBTITLE_DISPLAY_LENGTH = 80;
+        const COPY_RESET_DELAY_MS = 2000;
+        const SRT_TIME_RE = /(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/;
+
         let wavesurfer;
-        let subtitles = [];
-        let currentIndex = -1;
-        let lastAudioName = localStorage.getItem('lastAudioName') || '';
-        let lastSRTName = localStorage.getItem('lastSRTName') || '';
+        const state = { subtitles: [], currentIndex: -1 };
 
-        const audioInput = document.getElementById('audio-input');
-        const srtInput = document.getElementById('srt-input');
-        const playBtn = document.getElementById('play-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const copyBtn = document.getElementById('copy-btn');
-        const speedSelect = document.getElementById('speed-select');
-        const timeDisplay = document.getElementById('time-display');
-        const statusEl = document.getElementById('status');
-        const subtitleText = document.getElementById('subtitle-text');
-        const subtitleList = document.getElementById('subtitle-list');
-        const audioInfo = document.getElementById('audio-info');
-        const srtInfo = document.getElementById('srt-info');
+        function assert(condition, msg) {
+            if (!condition) {
+                console.error('Assertion failed: ' + msg);
+                return false;
+            }
+            return true;
+        }
 
-        if (lastAudioName) audioInfo.textContent = `Last: ${lastAudioName}`;
-        if (lastSRTName) srtInfo.textContent = `Last: ${lastSRTName}`;
+        function guardWaveSurfer() {
+            if (!wavesurfer) {
+                console.error('No wavesurfer instance');
+                return false;
+            }
+            return true;
+        }
+
+        function initDOM() {
+            return {
+                audioInput: document.getElementById('audio-input'),
+                srtInput: document.getElementById('srt-input'),
+                playBtn: document.getElementById('play-btn'),
+                stopBtn: document.getElementById('stop-btn'),
+                resetBtn: document.getElementById('reset-btn'),
+                copyBtn: document.getElementById('copy-btn'),
+                speedSelect: document.getElementById('speed-select'),
+                timeDisplay: document.getElementById('time-display'),
+                statusEl: document.getElementById('status'),
+                subtitleText: document.getElementById('subtitle-text'),
+                subtitleList: document.getElementById('subtitle-list'),
+                audioInfo: document.getElementById('audio-info'),
+                srtInfo: document.getElementById('srt-info'),
+            };
+        }
+
+        const dom = initDOM();
+
+        function setStatus(text, cls) {
+            dom.statusEl.textContent = text;
+            dom.statusEl.className = cls ? 'status ' + cls : 'status';
+        }
+
+        function formatTime(seconds) {
+            if (!assert(typeof seconds === 'number' && !isNaN(seconds), 'formatTime: invalid number')) {
+                return '00:00:00';
+            }
+            if (!assert(seconds >= 0, 'formatTime: negative value')) {
+                return '00:00:00';
+            }
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return h.toString().padStart(2, '0') + ':' +
+                   m.toString().padStart(2, '0') + ':' +
+                   s.toString().padStart(2, '0');
+        }
+
+        function parseSRTTimestamp(match) {
+            const start = parseInt(match[1]) * 3600 +
+                          parseInt(match[2]) * 60 +
+                          parseInt(match[3]) +
+                          parseInt(match[4]) / 1000;
+            const end = parseInt(match[5]) * 3600 +
+                        parseInt(match[6]) * 60 +
+                        parseInt(match[7]) +
+                        parseInt(match[8]) / 1000;
+            return { start: start, end: end };
+        }
+
+        function parseSRT(srtText) {
+            if (!assert(typeof srtText === 'string', 'parseSRT: expected string')) {
+                return [];
+            }
+            if (!assert(srtText.trim().length > 0, 'parseSRT: empty input')) {
+                return [];
+            }
+
+            const blocks = srtText.trim().split(/\n\n+/);
+            const parsed = [];
+
+            for (let i = 0; i < blocks.length && i < MAX_SRT_BLOCKS; i++) {
+                const lines = blocks[i].split('\n');
+                if (lines.length < 3) { continue; }
+
+                const timeMatch = lines[1].match(SRT_TIME_RE);
+                if (!timeMatch) { continue; }
+
+                try {
+                    const ts = parseSRTTimestamp(timeMatch);
+                    const text = lines.slice(2).join(' ');
+                    parsed.push({ start: ts.start, end: ts.end, text: text });
+                } catch (e) {
+                    console.error('parseSRT: failed to parse block ' + i, e);
+                }
+            }
+
+            if (blocks.length > MAX_SRT_BLOCKS) {
+                console.error('parseSRT: exceeded MAX_SRT_BLOCKS (' + MAX_SRT_BLOCKS + ')');
+            }
+
+            return parsed;
+        }
 
         function initWaveform() {
             wavesurfer = WaveSurfer.create({
@@ -152,101 +241,119 @@
                 normalize: true,
             });
 
-            wavesurfer.on('play', () => {
-                playBtn.textContent = '⏸ Pause';
-                statusEl.textContent = '▶ Playing';
-                statusEl.className = 'status playing';
+            wavesurfer.on('play', function () {
+                dom.playBtn.textContent = '\u23F8 Pause';
+                setStatus('\u25B6 Playing', 'playing');
             });
 
-            wavesurfer.on('pause', () => {
-                playBtn.textContent = '▶ Play';
-                statusEl.textContent = '⏸ Paused';
-                statusEl.className = 'status';
+            wavesurfer.on('pause', function () {
+                dom.playBtn.textContent = '\u25B6 Play';
+                setStatus('\u23F8 Paused', '');
             });
 
-            wavesurfer.on('timeupdate', (currentTime) => {
+            wavesurfer.on('timeupdate', function (currentTime) {
                 updateTimeDisplay(currentTime);
                 updateCurrentSubtitle(currentTime);
             });
 
-            wavesurfer.on('finish', () => {
-                playBtn.textContent = '▶ Play';
-                statusEl.textContent = '✓ Finished';
-                statusEl.className = 'status ready';
+            wavesurfer.on('finish', function () {
+                dom.playBtn.textContent = '\u25B6 Play';
+                setStatus('\u2713 Finished', 'ready');
             });
         }
 
-        function parseSRT(srtText) {
-            const blocks = srtText.trim().split(/\n\n+/);
-            const parsed = [];
-            
-            for (const block of blocks) {
-                const lines = block.split('\n');
-                if (lines.length < 3) continue;
-                
-                const timeLine = lines[1];
-                const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
-                
-                if (timeMatch) {
-                    const startTime = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]) + parseInt(timeMatch[4]) / 1000;
-                    const endTime = parseInt(timeMatch[5]) * 3600 + parseInt(timeMatch[6]) * 60 + parseInt(timeMatch[7]) + parseInt(timeMatch[8]) / 1000;
-                    const text = lines.slice(2).join(' ');
-                    
-                    parsed.push({ start: startTime, end: endTime, text: text });
-                }
-            }
-            
-            return parsed;
-        }
-
-        function formatTime(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = Math.floor(seconds % 60);
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
-
         function updateTimeDisplay(currentTime) {
+            if (!guardWaveSurfer()) { return; }
             const duration = wavesurfer.getDuration();
-            timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+            dom.timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
         }
 
         function updateCurrentSubtitle(currentTime) {
-            const index = subtitles.findIndex(s => currentTime >= s.start && currentTime <= s.end);
-            
-            if (index !== -1 && index !== currentIndex) {
-                currentIndex = index;
-                subtitleText.innerHTML = `<span class="current-subtitle">${subtitles[index].text}</span>`;
-                
-                document.querySelectorAll('.subtitle-item').forEach((el, i) => {
-                    el.classList.toggle('active', i === index);
-                });
-            } else if (index === -1) {
-                currentIndex = -1;
-                subtitleText.textContent = '...';
+            if (!assert(Array.isArray(state.subtitles), 'updateCurrentSubtitle: not array')) {
+                return;
+            }
+
+            let foundIndex = -1;
+            for (let i = 0; i < state.subtitles.length && i < MAX_SRT_BLOCKS; i++) {
+                if (currentTime >= state.subtitles[i].start && currentTime <= state.subtitles[i].end) {
+                    foundIndex = i;
+                    break;
+                }
+            }
+
+            if (foundIndex !== -1 && foundIndex !== state.currentIndex) {
+                state.currentIndex = foundIndex;
+                const safeText = state.subtitles[foundIndex].text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                dom.subtitleText.innerHTML = '<span class="current-subtitle">' + safeText + '</span>';
+
+                const items = document.querySelectorAll('.subtitle-item');
+                for (let i = 0; i < items.length && i < MAX_SRT_BLOCKS; i++) {
+                    items[i].classList.toggle('active', i === foundIndex);
+                }
+            } else if (foundIndex === -1) {
+                state.currentIndex = -1;
+                dom.subtitleText.textContent = '...';
             }
         }
 
         function renderSubtitleList() {
-            subtitleList.innerHTML = subtitles.map((s, i) => `
-                <div class="subtitle-item" data-index="${i}" onclick="seekTo(${s.start})">
-                    <span class="subtitle-time">${formatTime(s.start)} - ${formatTime(s.end)}</span><br>
-                    ${s.text.substring(0, 80)}${s.text.length > 80 ? '...' : ''}
-                </div>
-            `).join('');
+            if (!assert(Array.isArray(state.subtitles), 'renderSubtitleList: not array')) {
+                return;
+            }
+
+            const count = Math.min(state.subtitles.length, MAX_SRT_BLOCKS);
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                const s = state.subtitles[i];
+                const truncated = s.text.length > MAX_SUBTITLE_DISPLAY_LENGTH
+                    ? s.text.substring(0, MAX_SUBTITLE_DISPLAY_LENGTH) + '...'
+                    : s.text;
+                html += '<div class="subtitle-item" data-index="' + i + '">' +
+                    '<span class="subtitle-time">' + formatTime(s.start) + ' - ' + formatTime(s.end) + '</span><br>' +
+                    truncated +
+                    '</div>';
+            }
+            dom.subtitleList.innerHTML = html;
+
+            const items = dom.subtitleList.querySelectorAll('.subtitle-item');
+            for (let i = 0; i < items.length; i++) {
+                items[i].addEventListener('click', createSeekHandler(state.subtitles[i].start));
+            }
+        }
+
+        function createSeekHandler(time) {
+            return function () {
+                seekTo(time);
+            };
         }
 
         function seekTo(time) {
-            wavesurfer.seekTo(time / wavesurfer.getDuration());
+            if (!guardWaveSurfer()) { return; }
+            if (!assert(typeof time === 'number' && !isNaN(time), 'seekTo: invalid time')) { return; }
+            if (!assert(time >= 0, 'seekTo: negative time')) { return; }
+
+            const duration = wavesurfer.getDuration();
+            if (!assert(duration > 0, 'seekTo: zero duration')) { return; }
+
+            wavesurfer.seekTo(time / duration);
             wavesurfer.play();
         }
 
         function copyAllSubtitles() {
-            const text = subtitles.map(s => s.text).join('\n');
-            navigator.clipboard.writeText(text).then(() => {
-                copyBtn.textContent = 'Copied!';
-                setTimeout(() => copyBtn.textContent = 'Copy All', 2000);
-            });
+            if (!assert(state.subtitles.length > 0, 'copyAllSubtitles: no subtitles')) { return; }
+
+            const text = state.subtitles.map(function (s) { return s.text; }).join('\n');
+            try {
+                navigator.clipboard.writeText(text).then(function () {
+                    dom.copyBtn.textContent = 'Copied!';
+                    setTimeout(function () { dom.copyBtn.textContent = 'Copy All'; }, COPY_RESET_DELAY_MS);
+                });
+            } catch (e) {
+                console.error('copyAllSubtitles: clipboard write failed', e);
+            }
         }
 
         function resetPlayer() {
@@ -255,74 +362,91 @@
                 wavesurfer.destroy();
                 wavesurfer = null;
             }
-            subtitles = [];
-            currentIndex = -1;
-            audioInput.value = '';
-            srtInput.value = '';
-            audioInfo.textContent = 'No file selected';
-            srtInfo.textContent = 'No file selected';
-            timeDisplay.textContent = '00:00 / 00:00';
-            statusEl.textContent = 'Select audio and SRT files';
-            statusEl.className = 'status';
-            subtitleText.textContent = 'No subtitles loaded';
-            subtitleList.innerHTML = '';
-            playBtn.textContent = '▶ Play';
+            state.subtitles = [];
+            state.currentIndex = -1;
+            dom.audioInput.value = '';
+            dom.srtInput.value = '';
+            dom.audioInfo.textContent = 'No file selected';
+            dom.srtInfo.textContent = 'No file selected';
+            dom.timeDisplay.textContent = '00:00 / 00:00';
+            setStatus('Select audio and SRT files', '');
+            dom.subtitleText.textContent = 'No subtitles loaded';
+            dom.subtitleList.innerHTML = '';
+            dom.playBtn.textContent = '\u25B6 Play';
             localStorage.removeItem('lastAudioName');
             localStorage.removeItem('lastSRTName');
         }
 
-        audioInput.addEventListener('change', (e) => {
+        function handleAudioChange(e) {
             const file = e.target.files[0];
-            if (!file) return;
-            
-            if (!wavesurfer) initWaveform();
-            
+            if (!assert(file, 'handleAudioChange: no file selected')) { return; }
+
+            if (!wavesurfer) { initWaveform(); }
+
             const url = URL.createObjectURL(file);
             wavesurfer.load(url);
-            
-            audioInfo.textContent = file.name;
-            localStorage.setItem('lastAudioName', file.name);
-            
-            statusEl.textContent = 'Audio loaded';
-            statusEl.className = 'status ready';
-        });
 
-        srtInput.addEventListener('change', (e) => {
+            dom.audioInfo.textContent = file.name;
+            localStorage.setItem('lastAudioName', file.name);
+            setStatus('Audio loaded', 'ready');
+        }
+
+        function handleSRTChange(e) {
             const file = e.target.files[0];
-            if (!file) return;
-            
+            if (!assert(file, 'handleSRTChange: no file selected')) { return; }
+
             const reader = new FileReader();
-            reader.onload = (event) => {
-                subtitles = parseSRT(event.target.result);
-                renderSubtitleList();
-                subtitleText.textContent = 'SRT loaded - ' + subtitles.length + ' segments';
-                srtInfo.textContent = file.name;
-                localStorage.setItem('lastSRTName', file.name);
-                statusEl.textContent = 'SRT loaded - ' + subtitles.length + ' segments';
-                statusEl.className = 'status ready';
+            reader.onload = function (event) {
+                try {
+                    state.subtitles = parseSRT(event.target.result);
+                    renderSubtitleList();
+                    const count = state.subtitles.length;
+                    dom.subtitleText.textContent = 'SRT loaded - ' + count + ' segments';
+                    dom.srtInfo.textContent = file.name;
+                    localStorage.setItem('lastSRTName', file.name);
+                    setStatus('SRT loaded - ' + count + ' segments', 'ready');
+                } catch (err) {
+                    console.error('handleSRTChange: parse failed', err);
+                    setStatus('SRT parse error', '');
+                }
             };
             reader.readAsText(file);
-        });
+        }
 
-        playBtn.addEventListener('click', () => {
-            if (!wavesurfer) return;
+        function handlePlay() {
+            if (!guardWaveSurfer()) { return; }
             wavesurfer.playPause();
-        });
+        }
 
-        stopBtn.addEventListener('click', () => {
-            if (!wavesurfer) return;
+        function handleStop() {
+            if (!guardWaveSurfer()) { return; }
             wavesurfer.stop();
-            playBtn.textContent = '▶ Play';
-            statusEl.textContent = 'Stopped';
-        });
+            dom.playBtn.textContent = '\u25B6 Play';
+            setStatus('Stopped', '');
+        }
 
-        resetBtn.addEventListener('click', resetPlayer);
-        copyBtn.addEventListener('click', copyAllSubtitles);
-
-speedSelect.addEventListener('change', (e) => {
-            if (!wavesurfer) return;
+        function handleSpeedChange(e) {
+            if (!guardWaveSurfer()) { return; }
             wavesurfer.setPlaybackRate(parseFloat(e.target.value));
-        });
+        }
+
+        function init() {
+            const lastAudioName = localStorage.getItem('lastAudioName') || '';
+            const lastSRTName = localStorage.getItem('lastSRTName') || '';
+
+            if (lastAudioName) { dom.audioInfo.textContent = 'Last: ' + lastAudioName; }
+            if (lastSRTName) { dom.srtInfo.textContent = 'Last: ' + lastSRTName; }
+
+            dom.audioInput.addEventListener('change', handleAudioChange);
+            dom.srtInput.addEventListener('change', handleSRTChange);
+            dom.playBtn.addEventListener('click', handlePlay);
+            dom.stopBtn.addEventListener('click', handleStop);
+            dom.resetBtn.addEventListener('click', resetPlayer);
+            dom.copyBtn.addEventListener('click', copyAllSubtitles);
+            dom.speedSelect.addEventListener('change', handleSpeedChange);
+        }
+
+        init();
     </script>
 </body>
 </html>
