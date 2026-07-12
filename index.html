@@ -7,51 +7,321 @@
     <meta name="theme-color" content="#1a1a2e">
     <script src="wavesurfer.min.js"></script>
     <style>
-        :root { color-scheme: dark; }
+        :root {
+            color-scheme: dark;
+            --accent: #00d4ff;
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --surface-alt: #0f0f23;
+            --border: #333;
+            --text: #eee;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-dim: rgba(255, 255, 255, 0.4);
+            --btn-size: 42px;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        :focus-visible { outline: 2px solid #00d4ff; outline-offset: 2px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; padding: 20px; }
-        h1 { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; color: #00d4ff; }
-        .logo { width: 32px; height: 32px; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
         .container { max-width: 900px; margin: 0 auto; }
-        .upload-section { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-        .upload-box { flex: 1; min-width: 300px; background: #16213e; padding: 20px; border-radius: 12px; border: 2px dashed #444; }
-        .upload-box:hover { border-color: #00d4ff; }
-        label { display: block; margin-bottom: 10px; font-weight: 600; color: #00d4ff; }
-        input[type="file"] { width: 100%; padding: 12px; background: #0f0f23; border-radius: 8px; color: #fff; cursor: pointer; }
-        .player-section { background: #16213e; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        #waveform { width: 100%; height: 80px; background: #0f0f23; border-radius: 8px; margin-bottom: 15px; }
-        .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        button { padding: 14px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; }
-        .btn-primary { background: #00d4ff; color: #000; }
-        .btn-primary:hover { background: #00b8e6; }
-        .btn-secondary { background: #444; color: #fff; }
-        .btn-secondary:hover { background: #555; }
-        .speed-control { display: flex; align-items: center; gap: 8px; }
-        .speed-control select { padding: 12px 16px; border-radius: 8px; background: #0f0f23; color: #fff; border: 1px solid #444; font-size: 14px; cursor: pointer; }
-        .time-display { font-family: monospace; font-size: 14px; color: #888; }
-        .subtitle-display { background: #0f0f23; padding: 20px; border-radius: 12px; min-height: 150px; }
-        .subtitle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .subtitle-header h3 { color: #00d4ff; }
-        .copy-btn { padding: 8px 16px; font-size: 12px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; cursor: pointer; }
-        .copy-btn:hover { background: #444; }
-        #subtitle-text { font-size: 18px; line-height: 1.6; min-height: 100px; }
-        .current-subtitle { color: #00d4ff; font-weight: 600; }
-        .subtitle-list { max-height: 400px; overflow-y: auto; scrollbar-width: thin; }
-        .subtitle-item { padding: 12px; margin: 4px 0; border-radius: 8px; cursor: pointer; }
-        .subtitle-item:hover { background: #1e3a5f; }
-        .subtitle-item.active { background: #00d4ff; color: #000; }
-        .subtitle-time { color: #888; font-size: 12px; }
-        .status { text-align: center; padding: 10px; color: #888; }
+
+        h1 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: var(--accent);
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .logo { width: 32px; height: 32px; }
+
+        .upload-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .upload-box {
+            flex: 1;
+            min-width: 280px;
+            background: var(--surface);
+            padding: 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+        .upload-box:hover { border-color: var(--accent); }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--accent);
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+
+        .player-section {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+        }
+
+        .waveform-container {
+            position: relative;
+            margin-bottom: 12px;
+        }
+        #waveform {
+            width: 100%;
+            height: 80px;
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+        }
+        .waveform-hover-time {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 1000;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .waveform-btn {
+            width: var(--btn-size);
+            height: var(--btn-size);
+            min-width: var(--btn-size);
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            padding: 0;
+            opacity: 0.9;
+            flex-shrink: 0;
+        }
+        .waveform-btn:hover { opacity: 1; transform: scale(1.05); }
+        .waveform-btn:disabled { cursor: not-allowed; opacity: 0.3; }
+        .waveform-btn svg {
+            width: calc(var(--btn-size) * 0.45);
+            height: calc(var(--btn-size) * 0.45);
+            fill: currentColor;
+            display: block;
+        }
+        .waveform-btn .icon-play { margin-left: 2px; }
+
+        .btn-minimal {
+            width: auto;
+            height: auto;
+            min-width: auto;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            color: var(--text);
+            opacity: 0.5;
+            padding: 10px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-minimal:hover { opacity: 1; }
+
+        .waveform-speed { position: relative; flex-shrink: 0; }
+        .speed-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 40px;
+        }
+        .speed-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .speed-menu {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 4px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 4px;
+            z-index: 100;
+            min-width: 60px;
+        }
+        .speed-option {
+            display: block;
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            border-radius: 4px;
+        }
+        .speed-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .speed-option.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .time-display {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status {
+            text-align: center;
+            padding: 8px;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
         .status.ready { color: #00ff88; }
-        .status.playing { color: #00d4ff; }
-        .file-info { font-size: 12px; color: #666; margin-top: 8px; }
-        .repo-link { text-align: center; margin-top: 20px; font-size: 12px; }
-        .repo-link a { color: #666; text-decoration: none; }
-        .repo-link a:hover { color: #00d4ff; }
-        
+        .status.playing { color: var(--accent); }
+
+        .subtitle-display {
+            background: var(--surface-alt);
+            padding: 20px;
+            border-radius: var(--radius);
+            min-height: 150px;
+        }
+        .subtitle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .subtitle-header h3 {
+            color: var(--text);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .copy-btn {
+            padding: 6px 14px;
+            font-size: 11px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+        }
+
+        #subtitle-text {
+            font-size: 16px;
+            line-height: 1.6;
+            min-height: 80px;
+            color: var(--text-secondary);
+        }
+        .current-subtitle {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .subtitle-list {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .subtitle-item {
+            padding: 10px 12px;
+            margin: 2px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .subtitle-item:hover { background: rgba(255, 255, 255, 0.05); }
+        .subtitle-item.active { background: var(--accent); color: #000; }
+        .subtitle-time {
+            color: var(--text-dim);
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .file-info {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 6px;
+        }
+        .repo-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 11px;
+        }
+        .repo-link a { color: var(--text-dim); text-decoration: none; }
+        .repo-link a:hover { color: var(--accent); }
+
+        hr { border: none; border-top: 1px solid var(--border); margin: 15px 0; }
+
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .waveform-btn { width: 36px; height: 36px; min-width: 36px; }
+            #waveform { height: 60px; }
+            .subtitle-display { padding: 14px; }
+            .upload-box { min-width: 100%; }
+        }
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
@@ -80,20 +350,29 @@
         </div>
         
         <div class="player-section">
-            <div id="waveform"></div>
+            <div class="waveform-container">
+                <div id="waveform"></div>
+                <div class="waveform-hover-time" id="waveform-hover-time" aria-hidden="true"></div>
+            </div>
             <div class="controls">
-                <button class="btn-primary" id="play-btn">▶ Play</button>
-                <button class="btn-secondary" id="stop-btn">⏹ Stop</button>
-                <button class="btn-secondary" id="reset-btn">↺ Reset</button>
-                <div class="speed-control">
-                    <select id="speed-select">
-                        <option value="0.5">0.5x</option>
-                        <option value="0.75">0.75x</option>
-                        <option value="1" selected>1x</option>
-                        <option value="1.25">1.25x</option>
-                        <option value="1.5">1.5x</option>
-                        <option value="2">2x</option>
-                    </select>
+                <button class="waveform-btn" id="play-btn" aria-label="Play">
+                    <svg class="icon-play" viewBox="0 0 24 24" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="icon-pause" viewBox="0 0 24 24" width="16" height="16" style="display:none;"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>
+                </button>
+                <button class="btn-minimal" id="stop-btn" aria-label="Stop">Stop</button>
+                <button class="btn-minimal" id="reset-btn" aria-label="Reset">Reset</button>
+                <div class="waveform-speed">
+                    <button class="speed-btn" id="speed-btn" aria-label="Playback speed" aria-haspopup="menu" aria-expanded="false">
+                        <span class="speed-value" id="speed-value">1x</span>
+                    </button>
+                    <div class="speed-menu" id="speed-menu" role="menu" aria-label="Playback speed" style="display: none;">
+                        <button class="speed-option" role="menuitemradio" data-rate="0.5" tabindex="-1">0.5x</button>
+                        <button class="speed-option" role="menuitemradio" data-rate="0.75" tabindex="-1">0.75x</button>
+                        <button class="speed-option active" role="menuitemradio" data-rate="1" tabindex="-1">1x</button>
+                        <button class="speed-option" role="menuitemradio" data-rate="1.25" tabindex="-1">1.25x</button>
+                        <button class="speed-option" role="menuitemradio" data-rate="1.5" tabindex="-1">1.5x</button>
+                        <button class="speed-option" role="menuitemradio" data-rate="2" tabindex="-1">2x</button>
+                    </div>
                 </div>
                 <span class="time-display" id="time-display">00:00 / 00:00</span>
             </div>
@@ -106,7 +385,7 @@
                 <button class="copy-btn" id="copy-btn" aria-label="Copy all subtitles to clipboard">Copy All</button>
             </div>
             <div id="subtitle-text">No subtitles loaded</div>
-            <hr style="border-color: #333; margin: 15px 0;">
+            <hr>
             <div class="subtitle-list" id="subtitle-list"></div>
         </div>
 
@@ -147,16 +426,22 @@
                 audioInput: document.getElementById('audio-input'),
                 srtInput: document.getElementById('srt-input'),
                 playBtn: document.getElementById('play-btn'),
+                iconPlay: document.querySelector('#play-btn .icon-play'),
+                iconPause: document.querySelector('#play-btn .icon-pause'),
                 stopBtn: document.getElementById('stop-btn'),
                 resetBtn: document.getElementById('reset-btn'),
                 copyBtn: document.getElementById('copy-btn'),
-                speedSelect: document.getElementById('speed-select'),
+                speedBtn: document.getElementById('speed-btn'),
+                speedMenu: document.getElementById('speed-menu'),
+                speedValue: document.getElementById('speed-value'),
                 timeDisplay: document.getElementById('time-display'),
                 statusEl: document.getElementById('status'),
                 subtitleText: document.getElementById('subtitle-text'),
                 subtitleList: document.getElementById('subtitle-list'),
                 audioInfo: document.getElementById('audio-info'),
                 srtInfo: document.getElementById('srt-info'),
+                waveformHoverTime: document.getElementById('waveform-hover-time'),
+                waveformContainer: document.querySelector('.waveform-container'),
             };
         }
 
@@ -165,6 +450,11 @@
         function setStatus(text, cls) {
             dom.statusEl.textContent = text;
             dom.statusEl.className = cls ? 'status ' + cls : 'status';
+        }
+
+        function setPlayButtonState(playing) {
+            dom.iconPlay.style.display = playing ? 'none' : 'block';
+            dom.iconPause.style.display = playing ? 'block' : 'none';
         }
 
         function formatTime(seconds) {
@@ -242,13 +532,13 @@
             });
 
             wavesurfer.on('play', function () {
-                dom.playBtn.textContent = '\u23F8 Pause';
-                setStatus('\u25B6 Playing', 'playing');
+                setPlayButtonState(true);
+                setStatus('Playing', 'playing');
             });
 
             wavesurfer.on('pause', function () {
-                dom.playBtn.textContent = '\u25B6 Play';
-                setStatus('\u23F8 Paused', '');
+                setPlayButtonState(false);
+                setStatus('Paused', '');
             });
 
             wavesurfer.on('timeupdate', function (currentTime) {
@@ -257,8 +547,8 @@
             });
 
             wavesurfer.on('finish', function () {
-                dom.playBtn.textContent = '\u25B6 Play';
-                setStatus('\u2713 Finished', 'ready');
+                setPlayButtonState(false);
+                setStatus('Finished', 'ready');
             });
         }
 
@@ -372,7 +662,7 @@
             setStatus('Select audio and SRT files', '');
             dom.subtitleText.textContent = 'No subtitles loaded';
             dom.subtitleList.innerHTML = '';
-            dom.playBtn.textContent = '\u25B6 Play';
+            setPlayButtonState(false);
             localStorage.removeItem('lastAudioName');
             localStorage.removeItem('lastSRTName');
         }
@@ -421,18 +711,56 @@
         function handleStop() {
             if (!guardWaveSurfer()) { return; }
             wavesurfer.stop();
-            dom.playBtn.textContent = '\u25B6 Play';
+            setPlayButtonState(false);
             setStatus('Stopped', '');
         }
 
-        function handleSpeedChange(e) {
+        function handleSpeedChange(rate) {
             if (!guardWaveSurfer()) { return; }
-            wavesurfer.setPlaybackRate(parseFloat(e.target.value));
+            wavesurfer.setPlaybackRate(rate);
+            dom.speedValue.textContent = rate === 1 ? '1x' : rate + 'x';
+            var options = dom.speedMenu.querySelectorAll('.speed-option');
+            for (var i = 0; i < options.length; i++) {
+                var isActive = parseFloat(options[i].getAttribute('data-rate')) === rate;
+                options[i].classList.toggle('active', isActive);
+                options[i].setAttribute('aria-checked', isActive ? 'true' : 'false');
+            }
+        }
+
+        function toggleSpeedMenu(show) {
+            var isOpen = show !== undefined ? show : dom.speedMenu.style.display === 'none';
+            dom.speedMenu.style.display = isOpen ? 'block' : 'none';
+            dom.speedBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (isOpen) {
+                var active = dom.speedMenu.querySelector('.speed-option.active') || dom.speedMenu.querySelector('.speed-option');
+                if (active) { active.focus(); }
+            }
+        }
+
+        function setupWaveformHover() {
+            var waveformEl = document.getElementById('waveform');
+            var hoverEl = dom.waveformHoverTime;
+
+            waveformEl.addEventListener('pointermove', function (e) {
+                if (!guardWaveSurfer()) { return; }
+                var rect = waveformEl.getBoundingClientRect();
+                if (!rect.width) { return; }
+                var percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                var duration = wavesurfer.getDuration();
+                if (!duration) { return; }
+                hoverEl.textContent = formatTime(percent * duration);
+                hoverEl.style.left = (percent * 100) + '%';
+                hoverEl.style.opacity = '1';
+            });
+
+            waveformEl.addEventListener('pointerleave', function () {
+                hoverEl.style.opacity = '0';
+            });
         }
 
         function init() {
-            const lastAudioName = localStorage.getItem('lastAudioName') || '';
-            const lastSRTName = localStorage.getItem('lastSRTName') || '';
+            var lastAudioName = localStorage.getItem('lastAudioName') || '';
+            var lastSRTName = localStorage.getItem('lastSRTName') || '';
 
             if (lastAudioName) { dom.audioInfo.textContent = 'Last: ' + lastAudioName; }
             if (lastSRTName) { dom.srtInfo.textContent = 'Last: ' + lastSRTName; }
@@ -443,7 +771,27 @@
             dom.stopBtn.addEventListener('click', handleStop);
             dom.resetBtn.addEventListener('click', resetPlayer);
             dom.copyBtn.addEventListener('click', copyAllSubtitles);
-            dom.speedSelect.addEventListener('change', handleSpeedChange);
+
+            dom.speedBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleSpeedMenu();
+            });
+
+            dom.speedMenu.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var option = e.target.closest('.speed-option');
+                if (option) {
+                    handleSpeedChange(parseFloat(option.getAttribute('data-rate')));
+                    toggleSpeedMenu(false);
+                    dom.speedBtn.focus();
+                }
+            });
+
+            document.addEventListener('click', function () {
+                toggleSpeedMenu(false);
+            });
+
+            setupWaveformHover();
         }
 
         init();
