@@ -176,6 +176,17 @@
         }
         #copy-btn:hover { color: #000; }
 
+        .clear-btn {
+            font-family: inherit;
+            font-size: 0.85rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+        }
+        .clear-btn:hover { color: #000; }
+
         footer { margin-top: 2rem; }
 
         @media (max-width: 480px) {
@@ -202,11 +213,13 @@
             <label>audio →</label>
             <input type="file" id="audio-input" accept="audio/*,.m4a,.mp3,.wav,.flac,.ogg,.webm">
             <span class="dim file-info" id="audio-info">none</span>
+            <button class="clear-btn" id="clear-audio" style="display:none;">[×]</button>
         </div>
         <div class="input-row">
             <label>srt →</label>
             <input type="file" id="srt-input" accept=".srt">
             <span class="dim file-info" id="srt-info">none</span>
+            <button class="clear-btn" id="clear-srt" style="display:none;">[×]</button>
         </div>
 
         <h2>[player]</h2>
@@ -279,6 +292,8 @@
                 stopBtn: document.getElementById('stop-btn'),
                 resetBtn: document.getElementById('reset-btn'),
                 copyBtn: document.getElementById('copy-btn'),
+                clearAudio: document.getElementById('clear-audio'),
+                clearSRT: document.getElementById('clear-srt'),
                 speedBtn: document.getElementById('speed-btn'),
                 speedMenu: document.getElementById('speed-menu'),
                 timeDisplay: document.getElementById('time-display'),
@@ -504,13 +519,25 @@
             dom.srtInput.value = '';
             dom.audioInfo.textContent = 'none';
             dom.srtInfo.textContent = 'none';
+            dom.clearAudio.style.display = 'none';
+            dom.clearSRT.style.display = 'none';
             dom.timeDisplay.textContent = '00:00 / 00:00';
             setStatus('select files to begin', 'dim');
             dom.subtitleText.textContent = '\u2014';
             dom.subtitleList.innerHTML = '';
             setPlayButtonState(false);
-            localStorage.removeItem('lastAudioName');
-            localStorage.removeItem('lastSRTName');
+        }
+
+        function clearAudioInput() {
+            dom.audioInput.value = '';
+            dom.audioInfo.textContent = 'none';
+            dom.clearAudio.style.display = 'none';
+        }
+
+        function clearSRTInput() {
+            dom.srtInput.value = '';
+            dom.srtInfo.textContent = 'none';
+            dom.clearSRT.style.display = 'none';
         }
 
         function handleAudioChange(e) {
@@ -523,7 +550,7 @@
             wavesurfer.load(url);
 
             dom.audioInfo.textContent = file.name;
-            localStorage.setItem('lastAudioName', file.name);
+            dom.clearAudio.style.display = '';
             setStatus('loaded', 'dim');
         }
 
@@ -539,7 +566,7 @@
                     var count = state.subtitles.length;
                     dom.subtitleText.textContent = count + ' segments loaded';
                     dom.srtInfo.textContent = file.name;
-                    localStorage.setItem('lastSRTName', file.name);
+                    dom.clearSRT.style.display = '';
                     setStatus(count + ' segments', 'dim');
                 } catch (err) {
                     console.error('handleSRTChange: parse failed', err);
@@ -605,18 +632,14 @@
         }
 
         function init() {
-            var lastAudioName = localStorage.getItem('lastAudioName') || '';
-            var lastSRTName = localStorage.getItem('lastSRTName') || '';
-
-            if (lastAudioName) { dom.audioInfo.textContent = lastAudioName; }
-            if (lastSRTName) { dom.srtInfo.textContent = lastSRTName; }
-
             dom.audioInput.addEventListener('change', handleAudioChange);
             dom.srtInput.addEventListener('change', handleSRTChange);
             dom.playBtn.addEventListener('click', handlePlay);
             dom.stopBtn.addEventListener('click', handleStop);
             dom.resetBtn.addEventListener('click', resetPlayer);
             dom.copyBtn.addEventListener('click', copyAllSubtitles);
+            dom.clearAudio.addEventListener('click', clearAudioInput);
+            dom.clearSRT.addEventListener('click', clearSRTInput);
 
             dom.speedBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
