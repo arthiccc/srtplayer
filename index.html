@@ -3,108 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRT Player</title>
-    <meta name="theme-color" content="#1a1a2e">
+    <title>srtplayer</title>
     <script src="wavesurfer.min.js"></script>
     <style>
-        :root {
-            color-scheme: dark;
-            --accent: #00d4ff;
-            --bg: #1a1a2e;
-            --surface: #16213e;
-            --surface-alt: #0f0f23;
-            --border: #333;
-            --text: #eee;
-            --text-secondary: rgba(255, 255, 255, 0.6);
-            --text-dim: rgba(255, 255, 255, 0.4);
-            --btn-size: 42px;
-            --radius: 12px;
-            --radius-sm: 8px;
+        @font-face {
+            font-family: 'Geist Mono';
+            src: url('./fonts/GeistMono.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Geist Mono', ui-monospace, 'Cascadia Code',
+                'Source Code Pro', Menlo, Consolas, monospace;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+            background: #fff;
+            color: #000;
         }
-        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        .container { max-width: 900px; margin: 0 auto; }
+        .dim { color: #999; }
 
-        h1 {
+        a { color: #000; text-decoration: underline; }
+        a:hover { background: #000; color: #fff; text-decoration: none; }
+
+        h1 { font-size: 1.25rem; font-weight: 400; margin-bottom: 0.25rem; }
+        h2 {
+            font-size: 1rem;
+            font-weight: 400;
+            margin-top: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            color: var(--accent);
-            font-size: 20px;
-            font-weight: 600;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
         }
-        .logo { width: 32px; height: 32px; }
-
-        .upload-section {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
+        .input-row label {
+            white-space: nowrap;
+            min-width: 7rem;
         }
-        .upload-box {
-            flex: 1;
-            min-width: 280px;
-            background: var(--surface);
-            padding: 16px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            transition: border-color 0.2s;
-        }
-        .upload-box:hover { border-color: var(--accent); }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 13px;
-            color: var(--accent);
-        }
-        input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            background: var(--surface-alt);
-            border-radius: var(--radius-sm);
-            color: #fff;
+        .input-row input[type="file"] {
+            font-family: inherit;
+            font-size: inherit;
+            border: none;
+            border-bottom: 1px solid #000;
+            background: transparent;
             cursor: pointer;
-            border: 1px solid var(--border);
+            flex: 1;
+            min-width: 0;
+        }
+        .input-row input[type="file"]::-webkit-file-upload-button {
+            font-family: inherit;
+            font-size: inherit;
+        }
+        .file-info {
+            font-size: 0.85rem;
+            min-width: 7rem;
+            text-align: right;
         }
 
-        .player-section {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: var(--radius);
-            margin-bottom: 16px;
-        }
-
-        .waveform-container {
-            position: relative;
-            margin-bottom: 12px;
-        }
         #waveform {
             width: 100%;
-            height: 80px;
-            background: var(--surface-alt);
-            border-radius: var(--radius-sm);
+            height: 64px;
+            margin: 1rem 0 0.5rem;
+            cursor: pointer;
         }
+
         .waveform-hover-time {
             position: absolute;
-            bottom: calc(100% + 6px);
+            bottom: calc(100% + 4px);
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
+            background: #000;
             color: #fff;
-            padding: 3px 7px;
-            border-radius: 4px;
-            font-size: 11px;
+            padding: 2px 6px;
+            font-size: 0.75rem;
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
             pointer-events: none;
@@ -113,166 +93,62 @@
             z-index: 1000;
         }
 
+        .waveform-wrap { position: relative; }
+
         .controls {
             display: flex;
-            gap: 12px;
             align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.25rem;
             flex-wrap: wrap;
         }
 
-        .waveform-btn {
-            width: var(--btn-size);
-            height: var(--btn-size);
-            min-width: var(--btn-size);
-            border-radius: 50%;
-            border: 2px solid currentColor;
-            background: transparent;
-            color: var(--text);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            padding: 0;
-            opacity: 0.9;
-            flex-shrink: 0;
-        }
-        .waveform-btn:hover { opacity: 1; transform: scale(1.05); }
-        .waveform-btn:disabled { cursor: not-allowed; opacity: 0.3; }
-        .waveform-btn svg {
-            width: calc(var(--btn-size) * 0.45);
-            height: calc(var(--btn-size) * 0.45);
-            fill: currentColor;
-            display: block;
-        }
-        .waveform-btn .icon-play { margin-left: 2px; }
-
-        .btn-minimal {
-            width: auto;
-            height: auto;
-            min-width: auto;
+        .controls button {
+            font-family: inherit;
+            font-size: inherit;
+            background: none;
             border: none;
-            border-radius: 0;
-            background: transparent;
-            color: var(--text);
-            opacity: 0.5;
-            padding: 10px 12px;
-            font-size: 13px;
             cursor: pointer;
-            transition: opacity 0.2s;
-            flex-shrink: 0;
+            padding: 0;
+            color: #000;
         }
-        .btn-minimal:hover { opacity: 1; }
+        .controls button:hover { background: #000; color: #fff; }
 
-        .waveform-speed { position: relative; flex-shrink: 0; }
-        .speed-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            padding: 4px 8px;
-            color: inherit;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-width: 40px;
-        }
-        .speed-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
+        #play-btn { font-size: 1.2rem; padding: 0 0.25rem; }
+
+        .speed-control { position: relative; }
         .speed-menu {
             position: absolute;
             bottom: 100%;
-            right: 0;
-            margin-bottom: 4px;
-            background: rgba(0, 0, 0, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
-            padding: 4px;
+            left: 0;
+            margin-bottom: 2px;
+            background: #000;
+            color: #fff;
+            padding: 0.25rem 0;
+            min-width: 4rem;
             z-index: 100;
-            min-width: 60px;
         }
-        .speed-option {
+        .speed-menu button {
             display: block;
             width: 100%;
-            background: transparent;
-            border: none;
-            color: rgba(255, 255, 255, 0.7);
-            padding: 6px 12px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
             text-align: left;
-            border-radius: 4px;
-        }
-        .speed-option:hover {
-            background: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.75rem;
             color: #fff;
-        }
-        .speed-option.active {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .time-display {
-            font-size: 11px;
-            color: var(--text-secondary);
-            white-space: nowrap;
-            flex-shrink: 0;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .status {
-            text-align: center;
-            padding: 8px;
-            color: var(--text-dim);
-            font-size: 12px;
-        }
-        .status.ready { color: #00ff88; }
-        .status.playing { color: var(--accent); }
-
-        .subtitle-display {
-            background: var(--surface-alt);
-            padding: 20px;
-            border-radius: var(--radius);
-            min-height: 150px;
-        }
-        .subtitle-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .subtitle-header h3 {
-            color: var(--text);
-            font-weight: 500;
-            font-size: 14px;
-        }
-        .copy-btn {
-            padding: 6px 14px;
-            font-size: 11px;
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
+            border: none;
+            background: none;
+            font-family: inherit;
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .copy-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text);
-        }
+        .speed-menu button:hover { background: #333; }
+        .speed-menu button.active { font-weight: 700; }
+
+        hr { border: none; border-top: 1px solid #ccc; margin: 1rem 0; }
 
         #subtitle-text {
-            font-size: 16px;
-            line-height: 1.6;
-            min-height: 80px;
-            color: var(--text-secondary);
-        }
-        .current-subtitle {
-            color: var(--accent);
-            font-weight: 500;
+            font-size: 1.1rem;
+            min-height: 2rem;
+            margin-bottom: 0.5rem;
         }
 
         .subtitle-list {
@@ -281,41 +157,32 @@
             scrollbar-width: thin;
         }
         .subtitle-item {
-            padding: 10px 12px;
-            margin: 2px 0;
-            border-radius: 6px;
+            padding: 0.2rem 0;
             cursor: pointer;
-            transition: background 0.15s;
         }
-        .subtitle-item:hover { background: rgba(255, 255, 255, 0.05); }
-        .subtitle-item.active { background: var(--accent); color: #000; }
-        .subtitle-time {
-            color: var(--text-dim);
-            font-size: 11px;
-            font-variant-numeric: tabular-nums;
-        }
+        .subtitle-item:hover { background: #eee; }
+        .subtitle-item.active { font-weight: 700; }
+        .subtitle-time { color: #999; font-size: 0.85rem; }
 
-        .file-info {
-            font-size: 11px;
-            color: var(--text-dim);
-            margin-top: 6px;
+        #copy-btn {
+            margin-top: 0.5rem;
+            font-family: inherit;
+            font-size: 0.85rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
         }
-        .repo-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 11px;
-        }
-        .repo-link a { color: var(--text-dim); text-decoration: none; }
-        .repo-link a:hover { color: var(--accent); }
+        #copy-btn:hover { color: #000; }
 
-        hr { border: none; border-top: 1px solid var(--border); margin: 15px 0; }
+        footer { margin-top: 2rem; }
 
         @media (max-width: 480px) {
-            body { padding: 12px; }
-            .waveform-btn { width: 36px; height: 36px; min-width: 36px; }
-            #waveform { height: 60px; }
-            .subtitle-display { padding: 14px; }
-            .upload-box { min-width: 100%; }
+            body { padding: 1rem; }
+            .input-row { flex-wrap: wrap; }
+            .input-row label { min-width: 100%; }
+            .file-info { min-width: 100%; text-align: left; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -326,84 +193,67 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>
-            <svg class="logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="8" width="28" height="16" rx="2" stroke="#00d4ff" stroke-width="2"/>
-                <path d="M8 16L12 12L16 16L20 12L24 16" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="26" cy="24" r="4" fill="#00d4ff"/>
-            </svg>
-            SRT Player
-        </h1>
-        
-        <div class="upload-section">
-            <div class="upload-box">
-                <label>Audio File</label>
-                <input type="file" id="audio-input" accept="audio/*,.m4a,.mp3,.wav,.flac,.ogg,.webm">
-                <div class="file-info" id="audio-info">No file selected</div>
-            </div>
-            <div class="upload-box">
-                <label>SRT File</label>
-                <input type="file" id="srt-input" accept=".srt">
-                <div class="file-info" id="srt-info">No file selected</div>
-            </div>
+    <main>
+        <h1>srtplayer</h1>
+        <p class="dim">// audio player with synced subtitles</p>
+
+        <h2>[input]</h2>
+        <div class="input-row">
+            <label>audio →</label>
+            <input type="file" id="audio-input" accept="audio/*,.m4a,.mp3,.wav,.flac,.ogg,.webm">
+            <span class="dim file-info" id="audio-info">none</span>
         </div>
-        
-        <div class="player-section">
-            <div class="waveform-container">
-                <div id="waveform"></div>
-                <div class="waveform-hover-time" id="waveform-hover-time" aria-hidden="true"></div>
-            </div>
-            <div class="controls">
-                <button class="waveform-btn" id="play-btn" aria-label="Play">
-                    <svg class="icon-play" viewBox="0 0 24 24" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
-                    <svg class="icon-pause" viewBox="0 0 24 24" width="16" height="16" style="display:none;"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>
-                </button>
-                <button class="btn-minimal" id="stop-btn" aria-label="Stop">Stop</button>
-                <button class="btn-minimal" id="reset-btn" aria-label="Reset">Reset</button>
-                <div class="waveform-speed">
-                    <button class="speed-btn" id="speed-btn" aria-label="Playback speed" aria-haspopup="menu" aria-expanded="false">
-                        <span class="speed-value" id="speed-value">1x</span>
-                    </button>
-                    <div class="speed-menu" id="speed-menu" role="menu" aria-label="Playback speed" style="display: none;">
-                        <button class="speed-option" role="menuitemradio" data-rate="0.5" tabindex="-1">0.5x</button>
-                        <button class="speed-option" role="menuitemradio" data-rate="0.75" tabindex="-1">0.75x</button>
-                        <button class="speed-option active" role="menuitemradio" data-rate="1" tabindex="-1">1x</button>
-                        <button class="speed-option" role="menuitemradio" data-rate="1.25" tabindex="-1">1.25x</button>
-                        <button class="speed-option" role="menuitemradio" data-rate="1.5" tabindex="-1">1.5x</button>
-                        <button class="speed-option" role="menuitemradio" data-rate="2" tabindex="-1">2x</button>
-                    </div>
-                </div>
-                <span class="time-display" id="time-display">00:00 / 00:00</span>
-            </div>
-            <div class="status" id="status">Select audio and SRT files</div>
-        </div>
-        
-        <div class="subtitle-display">
-            <div class="subtitle-header">
-                <h3>Subtitles</h3>
-                <button class="copy-btn" id="copy-btn" aria-label="Copy all subtitles to clipboard">Copy All</button>
-            </div>
-            <div id="subtitle-text">No subtitles loaded</div>
-            <hr>
-            <div class="subtitle-list" id="subtitle-list"></div>
+        <div class="input-row">
+            <label>srt →</label>
+            <input type="file" id="srt-input" accept=".srt">
+            <span class="dim file-info" id="srt-info">none</span>
         </div>
 
-        <div class="repo-link">
-            <a href="https://github.com/arthiccc/srtplayer" target="_blank" rel="noopener">GitHub →</a>
+        <h2>[player]</h2>
+        <div class="waveform-wrap">
+            <div id="waveform"></div>
+            <div class="waveform-hover-time" id="waveform-hover-time" aria-hidden="true"></div>
         </div>
-    </div>
+        <div class="controls">
+            <button id="play-btn" aria-label="Play">▶</button>
+            <button id="stop-btn">stop</button>
+            <button id="reset-btn">reset</button>
+            <div class="speed-control">
+                <button id="speed-btn" aria-haspopup="menu" aria-expanded="false">1x</button>
+                <div class="speed-menu" id="speed-menu" role="menu" style="display: none;">
+                    <button role="menuitemradio" data-rate="0.5">0.5x</button>
+                    <button role="menuitemradio" data-rate="0.75">0.75x</button>
+                    <button role="menuitemradio" data-rate="1" class="active">1x</button>
+                    <button role="menuitemradio" data-rate="1.25">1.25x</button>
+                    <button role="menuitemradio" data-rate="1.5">1.5x</button>
+                    <button role="menuitemradio" data-rate="2">2x</button>
+                </div>
+            </div>
+            <span class="dim" id="time-display">00:00 / 00:00</span>
+        </div>
+        <p class="dim" id="status">select files to begin</p>
+
+        <h2>[subtitles]</h2>
+        <div id="subtitle-text" class="dim">—</div>
+        <hr>
+        <div class="subtitle-list" id="subtitle-list"></div>
+        <button id="copy-btn">copy all</button>
+
+        <footer>
+            <p class="dim">→ <a href="https://github.com/arthiccc/srtplayer" target="_blank" rel="noopener">github.com/arthiccc/srtplayer</a></p>
+        </footer>
+    </main>
 
     <script>
         'use strict';
 
-        const MAX_SRT_BLOCKS = 10000;
-        const MAX_SUBTITLE_DISPLAY_LENGTH = 80;
-        const COPY_RESET_DELAY_MS = 2000;
-        const SRT_TIME_RE = /(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/;
+        var MAX_SRT_BLOCKS = 10000;
+        var MAX_SUBTITLE_DISPLAY_LENGTH = 80;
+        var COPY_RESET_DELAY_MS = 2000;
+        var SRT_TIME_RE = /(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/;
 
-        let wavesurfer;
-        const state = { subtitles: [], currentIndex: -1 };
+        var wavesurfer;
+        var state = { subtitles: [], currentIndex: -1 };
 
         function assert(condition, msg) {
             if (!condition) {
@@ -426,14 +276,11 @@
                 audioInput: document.getElementById('audio-input'),
                 srtInput: document.getElementById('srt-input'),
                 playBtn: document.getElementById('play-btn'),
-                iconPlay: document.querySelector('#play-btn .icon-play'),
-                iconPause: document.querySelector('#play-btn .icon-pause'),
                 stopBtn: document.getElementById('stop-btn'),
                 resetBtn: document.getElementById('reset-btn'),
                 copyBtn: document.getElementById('copy-btn'),
                 speedBtn: document.getElementById('speed-btn'),
                 speedMenu: document.getElementById('speed-menu'),
-                speedValue: document.getElementById('speed-value'),
                 timeDisplay: document.getElementById('time-display'),
                 statusEl: document.getElementById('status'),
                 subtitleText: document.getElementById('subtitle-text'),
@@ -441,20 +288,19 @@
                 audioInfo: document.getElementById('audio-info'),
                 srtInfo: document.getElementById('srt-info'),
                 waveformHoverTime: document.getElementById('waveform-hover-time'),
-                waveformContainer: document.querySelector('.waveform-container'),
             };
         }
 
-        const dom = initDOM();
+        var dom = initDOM();
 
         function setStatus(text, cls) {
             dom.statusEl.textContent = text;
-            dom.statusEl.className = cls ? 'status ' + cls : 'status';
+            dom.statusEl.className = cls ? 'dim ' + cls : 'dim';
         }
 
         function setPlayButtonState(playing) {
-            dom.iconPlay.style.display = playing ? 'none' : 'block';
-            dom.iconPause.style.display = playing ? 'block' : 'none';
+            dom.playBtn.textContent = playing ? '\u275A\u275A' : '\u25B6';
+            dom.playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
         }
 
         function formatTime(seconds) {
@@ -464,23 +310,23 @@
             if (!assert(seconds >= 0, 'formatTime: negative value')) {
                 return '00:00:00';
             }
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = Math.floor(seconds % 60);
+            var h = Math.floor(seconds / 3600);
+            var m = Math.floor((seconds % 3600) / 60);
+            var s = Math.floor(seconds % 60);
             return h.toString().padStart(2, '0') + ':' +
                    m.toString().padStart(2, '0') + ':' +
                    s.toString().padStart(2, '0');
         }
 
         function parseSRTTimestamp(match) {
-            const start = parseInt(match[1]) * 3600 +
-                          parseInt(match[2]) * 60 +
-                          parseInt(match[3]) +
-                          parseInt(match[4]) / 1000;
-            const end = parseInt(match[5]) * 3600 +
-                        parseInt(match[6]) * 60 +
-                        parseInt(match[7]) +
-                        parseInt(match[8]) / 1000;
+            var start = parseInt(match[1]) * 3600 +
+                        parseInt(match[2]) * 60 +
+                        parseInt(match[3]) +
+                        parseInt(match[4]) / 1000;
+            var end = parseInt(match[5]) * 3600 +
+                      parseInt(match[6]) * 60 +
+                      parseInt(match[7]) +
+                      parseInt(match[8]) / 1000;
             return { start: start, end: end };
         }
 
@@ -492,19 +338,19 @@
                 return [];
             }
 
-            const blocks = srtText.trim().split(/\n\n+/);
-            const parsed = [];
+            var blocks = srtText.trim().split(/\n\n+/);
+            var parsed = [];
 
-            for (let i = 0; i < blocks.length && i < MAX_SRT_BLOCKS; i++) {
-                const lines = blocks[i].split('\n');
+            for (var i = 0; i < blocks.length && i < MAX_SRT_BLOCKS; i++) {
+                var lines = blocks[i].split('\n');
                 if (lines.length < 3) { continue; }
 
-                const timeMatch = lines[1].match(SRT_TIME_RE);
+                var timeMatch = lines[1].match(SRT_TIME_RE);
                 if (!timeMatch) { continue; }
 
                 try {
-                    const ts = parseSRTTimestamp(timeMatch);
-                    const text = lines.slice(2).join(' ');
+                    var ts = parseSRTTimestamp(timeMatch);
+                    var text = lines.slice(2).join(' ');
                     parsed.push({ start: ts.start, end: ts.end, text: text });
                 } catch (e) {
                     console.error('parseSRT: failed to parse block ' + i, e);
@@ -521,24 +367,24 @@
         function initWaveform() {
             wavesurfer = WaveSurfer.create({
                 container: '#waveform',
-                waveColor: '#00d4ff',
-                progressColor: '#0088aa',
-                cursorColor: '#fff',
-                barWidth: 2,
-                barGap: 1,
-                barRadius: 3,
-                height: 80,
+                waveColor: '#ccc',
+                progressColor: '#000',
+                cursorColor: '#000',
+                barWidth: 1,
+                barGap: 2,
+                barRadius: 0,
+                height: 64,
                 normalize: true,
             });
 
             wavesurfer.on('play', function () {
                 setPlayButtonState(true);
-                setStatus('Playing', 'playing');
+                setStatus('playing', 'playing');
             });
 
             wavesurfer.on('pause', function () {
                 setPlayButtonState(false);
-                setStatus('Paused', '');
+                setStatus('paused', '');
             });
 
             wavesurfer.on('timeupdate', function (currentTime) {
@@ -548,13 +394,13 @@
 
             wavesurfer.on('finish', function () {
                 setPlayButtonState(false);
-                setStatus('Finished', 'ready');
+                setStatus('finished', 'dim');
             });
         }
 
         function updateTimeDisplay(currentTime) {
             if (!guardWaveSurfer()) { return; }
-            const duration = wavesurfer.getDuration();
+            var duration = wavesurfer.getDuration();
             dom.timeDisplay.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
         }
 
@@ -563,8 +409,8 @@
                 return;
             }
 
-            let foundIndex = -1;
-            for (let i = 0; i < state.subtitles.length && i < MAX_SRT_BLOCKS; i++) {
+            var foundIndex = -1;
+            for (var i = 0; i < state.subtitles.length && i < MAX_SRT_BLOCKS; i++) {
                 if (currentTime >= state.subtitles[i].start && currentTime <= state.subtitles[i].end) {
                     foundIndex = i;
                     break;
@@ -573,19 +419,19 @@
 
             if (foundIndex !== -1 && foundIndex !== state.currentIndex) {
                 state.currentIndex = foundIndex;
-                const safeText = state.subtitles[foundIndex].text
+                var safeText = state.subtitles[foundIndex].text
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;');
-                dom.subtitleText.innerHTML = '<span class="current-subtitle">' + safeText + '</span>';
+                dom.subtitleText.innerHTML = safeText;
 
-                const items = document.querySelectorAll('.subtitle-item');
-                for (let i = 0; i < items.length && i < MAX_SRT_BLOCKS; i++) {
-                    items[i].classList.toggle('active', i === foundIndex);
+                var items = document.querySelectorAll('.subtitle-item');
+                for (var j = 0; j < items.length && j < MAX_SRT_BLOCKS; j++) {
+                    items[j].classList.toggle('active', j === foundIndex);
                 }
             } else if (foundIndex === -1) {
                 state.currentIndex = -1;
-                dom.subtitleText.textContent = '...';
+                dom.subtitleText.textContent = '\u2014';
             }
         }
 
@@ -594,23 +440,23 @@
                 return;
             }
 
-            const count = Math.min(state.subtitles.length, MAX_SRT_BLOCKS);
-            let html = '';
-            for (let i = 0; i < count; i++) {
-                const s = state.subtitles[i];
-                const truncated = s.text.length > MAX_SUBTITLE_DISPLAY_LENGTH
+            var count = Math.min(state.subtitles.length, MAX_SRT_BLOCKS);
+            var html = '';
+            for (var i = 0; i < count; i++) {
+                var s = state.subtitles[i];
+                var truncated = s.text.length > MAX_SUBTITLE_DISPLAY_LENGTH
                     ? s.text.substring(0, MAX_SUBTITLE_DISPLAY_LENGTH) + '...'
                     : s.text;
                 html += '<div class="subtitle-item" data-index="' + i + '">' +
-                    '<span class="subtitle-time">' + formatTime(s.start) + ' - ' + formatTime(s.end) + '</span><br>' +
+                    '<span class="subtitle-time">' + formatTime(s.start) + ' - ' + formatTime(s.end) + '</span> ' +
                     truncated +
                     '</div>';
             }
             dom.subtitleList.innerHTML = html;
 
-            const items = dom.subtitleList.querySelectorAll('.subtitle-item');
-            for (let i = 0; i < items.length; i++) {
-                items[i].addEventListener('click', createSeekHandler(state.subtitles[i].start));
+            var items = dom.subtitleList.querySelectorAll('.subtitle-item');
+            for (var j = 0; j < items.length; j++) {
+                items[j].addEventListener('click', createSeekHandler(state.subtitles[j].start));
             }
         }
 
@@ -625,7 +471,7 @@
             if (!assert(typeof time === 'number' && !isNaN(time), 'seekTo: invalid time')) { return; }
             if (!assert(time >= 0, 'seekTo: negative time')) { return; }
 
-            const duration = wavesurfer.getDuration();
+            var duration = wavesurfer.getDuration();
             if (!assert(duration > 0, 'seekTo: zero duration')) { return; }
 
             wavesurfer.seekTo(time / duration);
@@ -635,11 +481,11 @@
         function copyAllSubtitles() {
             if (!assert(state.subtitles.length > 0, 'copyAllSubtitles: no subtitles')) { return; }
 
-            const text = state.subtitles.map(function (s) { return s.text; }).join('\n');
+            var text = state.subtitles.map(function (s) { return s.text; }).join('\n');
             try {
                 navigator.clipboard.writeText(text).then(function () {
-                    dom.copyBtn.textContent = 'Copied!';
-                    setTimeout(function () { dom.copyBtn.textContent = 'Copy All'; }, COPY_RESET_DELAY_MS);
+                    dom.copyBtn.textContent = 'copied!';
+                    setTimeout(function () { dom.copyBtn.textContent = 'copy all'; }, COPY_RESET_DELAY_MS);
                 });
             } catch (e) {
                 console.error('copyAllSubtitles: clipboard write failed', e);
@@ -656,11 +502,11 @@
             state.currentIndex = -1;
             dom.audioInput.value = '';
             dom.srtInput.value = '';
-            dom.audioInfo.textContent = 'No file selected';
-            dom.srtInfo.textContent = 'No file selected';
+            dom.audioInfo.textContent = 'none';
+            dom.srtInfo.textContent = 'none';
             dom.timeDisplay.textContent = '00:00 / 00:00';
-            setStatus('Select audio and SRT files', '');
-            dom.subtitleText.textContent = 'No subtitles loaded';
+            setStatus('select files to begin', 'dim');
+            dom.subtitleText.textContent = '\u2014';
             dom.subtitleList.innerHTML = '';
             setPlayButtonState(false);
             localStorage.removeItem('lastAudioName');
@@ -668,36 +514,36 @@
         }
 
         function handleAudioChange(e) {
-            const file = e.target.files[0];
+            var file = e.target.files[0];
             if (!assert(file, 'handleAudioChange: no file selected')) { return; }
 
             if (!wavesurfer) { initWaveform(); }
 
-            const url = URL.createObjectURL(file);
+            var url = URL.createObjectURL(file);
             wavesurfer.load(url);
 
             dom.audioInfo.textContent = file.name;
             localStorage.setItem('lastAudioName', file.name);
-            setStatus('Audio loaded', 'ready');
+            setStatus('loaded', 'dim');
         }
 
         function handleSRTChange(e) {
-            const file = e.target.files[0];
+            var file = e.target.files[0];
             if (!assert(file, 'handleSRTChange: no file selected')) { return; }
 
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function (event) {
                 try {
                     state.subtitles = parseSRT(event.target.result);
                     renderSubtitleList();
-                    const count = state.subtitles.length;
-                    dom.subtitleText.textContent = 'SRT loaded - ' + count + ' segments';
+                    var count = state.subtitles.length;
+                    dom.subtitleText.textContent = count + ' segments loaded';
                     dom.srtInfo.textContent = file.name;
                     localStorage.setItem('lastSRTName', file.name);
-                    setStatus('SRT loaded - ' + count + ' segments', 'ready');
+                    setStatus(count + ' segments', 'dim');
                 } catch (err) {
                     console.error('handleSRTChange: parse failed', err);
-                    setStatus('SRT parse error', '');
+                    setStatus('parse error', '');
                 }
             };
             reader.readAsText(file);
@@ -712,14 +558,14 @@
             if (!guardWaveSurfer()) { return; }
             wavesurfer.stop();
             setPlayButtonState(false);
-            setStatus('Stopped', '');
+            setStatus('stopped', 'dim');
         }
 
         function handleSpeedChange(rate) {
             if (!guardWaveSurfer()) { return; }
             wavesurfer.setPlaybackRate(rate);
-            dom.speedValue.textContent = rate === 1 ? '1x' : rate + 'x';
-            var options = dom.speedMenu.querySelectorAll('.speed-option');
+            dom.speedBtn.textContent = rate === 1 ? '1x' : rate + 'x';
+            var options = dom.speedMenu.querySelectorAll('button');
             for (var i = 0; i < options.length; i++) {
                 var isActive = parseFloat(options[i].getAttribute('data-rate')) === rate;
                 options[i].classList.toggle('active', isActive);
@@ -732,7 +578,7 @@
             dom.speedMenu.style.display = isOpen ? 'block' : 'none';
             dom.speedBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
             if (isOpen) {
-                var active = dom.speedMenu.querySelector('.speed-option.active') || dom.speedMenu.querySelector('.speed-option');
+                var active = dom.speedMenu.querySelector('.active') || dom.speedMenu.querySelector('button');
                 if (active) { active.focus(); }
             }
         }
@@ -762,8 +608,8 @@
             var lastAudioName = localStorage.getItem('lastAudioName') || '';
             var lastSRTName = localStorage.getItem('lastSRTName') || '';
 
-            if (lastAudioName) { dom.audioInfo.textContent = 'Last: ' + lastAudioName; }
-            if (lastSRTName) { dom.srtInfo.textContent = 'Last: ' + lastSRTName; }
+            if (lastAudioName) { dom.audioInfo.textContent = lastAudioName; }
+            if (lastSRTName) { dom.srtInfo.textContent = lastSRTName; }
 
             dom.audioInput.addEventListener('change', handleAudioChange);
             dom.srtInput.addEventListener('change', handleSRTChange);
@@ -779,7 +625,7 @@
 
             dom.speedMenu.addEventListener('click', function (e) {
                 e.stopPropagation();
-                var option = e.target.closest('.speed-option');
+                var option = e.target.closest('button[data-rate]');
                 if (option) {
                     handleSpeedChange(parseFloat(option.getAttribute('data-rate')));
                     toggleSpeedMenu(false);
