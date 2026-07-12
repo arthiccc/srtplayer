@@ -32,5 +32,6 @@ srt-player/
 
 inspired by and builds upon the work of:
 
+- [arraypress/waveform-player](https://github.com/arraypress/waveform-player) — lightweight, customizable audio player with waveform visualization
 - [wavesurfer.js](https://wavesurfer-js.org/) — audio visualization engine
 - [JFK/voicesrt](https://github.com/JFK/voicesrt) — the goat. full-featured srt editor with transcription, waveform, speaker management, youtube tools, ai suggestions
